@@ -1,10 +1,10 @@
-import linphonesw
 import React
+import linphonesw
 
 @objc(Sip)
 class Sip: RCTEventEmitter {
     private var mCore: Core!
-    private var mRegistrationDelegate : CoreDelegate!
+    private var mRegistrationDelegate: CoreDelegate!
 
     private var bluetoothMic: AudioDevice?
     private var bluetoothSpeaker: AudioDevice?
@@ -13,20 +13,20 @@ class Sip: RCTEventEmitter {
     private var loudSpeaker: AudioDevice?
     private var microphone: AudioDevice?
 
-    var isCallIncoming : Bool = false
-    var isCallRunning : Bool = false
+    var isCallIncoming: Bool = false
+    var isCallRunning: Bool = false
 
     /*------------ Callkit tutorial related variables ---------------*/
     let incomingCallName = "Incoming call example"
-    var mCall : Call?
-    var mProviderDelegate : CallKitProviderDelegate!
-    var mCallAlreadyStopped : Bool = false;
+    var mCall: Call?
+    var mProviderDelegate: CallKitProviderDelegate!
+    var mCallAlreadyStopped: Bool = false
 
     func stopCall() {
         // Call has been terminated by any side
 
         // Report to CallKit that the call is over, if the terminate action was initiated by other end of the call
-        if (self.isCallRunning) {
+        if self.isCallRunning {
             self.mProviderDelegate.stopCall()
         }
     }
@@ -41,100 +41,110 @@ class Sip: RCTEventEmitter {
 
             // Same for auth info
             mCore.clearAllAuthInfo()
-        }}
+        }
+    }
 
-    @objc func sendEvent( eventName: String, body: NSDictionary? = nil ) {
-        self.sendEvent(withName:eventName, body:body);
+    @objc func sendEvent(eventName: String, body: NSDictionary? = nil) {
+        self.sendEvent(withName: eventName, body: body)
     }
 
     @objc(initialise:withRejecter:)
-    func initialise(resolve:RCTPromiseResolveBlock,reject:RCTPromiseRejectBlock) {
+    func initialise(resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
         do {
             LoggingService.Instance.logLevel = LogLevel.Debug
 
-            try? mCore = Factory.Instance.createCore(configPath: "", factoryConfigPath: "", systemContext: nil)
+            try? mCore = Factory.Instance.createCore(
+                configPath: "", factoryConfigPath: "", systemContext: nil)
             mProviderDelegate = CallKitProviderDelegate(context: self)
             mCore.callkitEnabled = true
             mCore.pushNotificationEnabled = true
+
+            try? mCore.setProvisioninguri(newValue: "https://api.tokomni.cc/provision/linphone.xml")
             try? mCore.start()
 
             // Create a Core listener to listen for the callback we need
             // In this case, we want to know about the account registration status
             mRegistrationDelegate = CoreDelegateStub(
-                onCallStateChanged: {(
-                  core: Core,
-                  call: Call,
-                  state: Call.State?,
-                  message: String
-                ) in
-                  switch (state) {
-                  case .IncomingReceived:
-                      // Immediately hang up when we receive a call. There's nothing inherently wrong with this
-                      // but we don't need it right now, so better to leave it deactivated.
-                      // If app is in foreground, it's likely that we will receive the SIP invite before the Push notification
-                      if (!self.isCallIncoming) {
-                          self.mCall = call
-                          self.isCallIncoming = true
-                          self.mProviderDelegate.incomingCall()
-                      }
-                      self.sendEvent(eventName: "IncomingReceived")
+                onCallStateChanged: {
+                    (
+                        core: Core,
+                        call: Call,
+                        state: Call.State?,
+                        message: String
+                    ) in
+                    switch state {
+                    case .IncomingReceived:
+                        // Immediately hang up when we receive a call. There's nothing inherently wrong with this
+                        // but we don't need it right now, so better to leave it deactivated.
+                        // If app is in foreground, it's likely that we will receive the SIP invite before the Push notification
+                        if !self.isCallIncoming {
+                            self.mCall = call
+                            self.isCallIncoming = true
+                            self.mProviderDelegate.incomingCall()
+                        }
+                        self.sendEvent(eventName: "IncomingReceived")
 
-                   case .OutgoingInit:
-                      // First state an outgoing call will go through
-                      self.sendEvent(eventName: "ConnectionRequested")
-                case .OutgoingProgress:
-                      // First state an outgoing call will go through
-                      self.sendEvent(eventName: "CallRequested")
-                  case .OutgoingRinging:
-                      // Once remote accepts, ringing will commence (180 response)
-                      self.sendEvent(eventName: "CallRinging")
-                case .Connected:
-                      self.isCallIncoming = false
-                      self.isCallRunning = true
+                    case .OutgoingInit:
+                        // First state an outgoing call will go through
+                        if !self.isCallIncoming {
+                            self.mCall = call
+                            self.isCallIncoming = true
+                        }
+                        self.sendEvent(eventName: "ConnectionRequested")
+                    case .OutgoingProgress:
+                        // First state an outgoing call will go through
+                        self.sendEvent(eventName: "CallRequested")
+                    case .OutgoingRinging:
+                        // Once remote accepts, ringing will commence (180 response)
+                        self.sendEvent(eventName: "CallRinging")
+                    case .Connected:
+                        self.isCallIncoming = false
+                        self.isCallRunning = true
 
-                      self.sendEvent(eventName: "CallConnected")
-                case .StreamsRunning:
-                      // This state indicates the call is active.
-                      // You may reach this state multiple times, for example after a pause/resume
-                      // or after the ICE negotiation completes
-                      // Wait for the call to be connected before allowing a call update
-                      self.sendEvent(eventName: "CallStreamsRunning")
-                case .Paused:
-                      self.sendEvent(eventName: "CallPaused")
-                case .PausedByRemote:
-                      self.sendEvent(eventName: "CallPausedByRemote")
-                  case .Updating:
-                      // When we request a call update, for example when toggling video
-                      self.sendEvent(eventName: "CallUpdating")
-                  case .UpdatedByRemote:
-                      self.sendEvent(eventName: "CallUpdatedByRemote")
-                  case .Released:
-                      self.sendEvent(eventName: "CallReleased")
-                      self.stopCall()
-                  case .Error:
-                      self.sendEvent(eventName: "CallError")
-                      self.stopCall()
-                  case .End:
-                      self.sendEvent(eventName: "CallEnd")
-                      self.stopCall()
-                  case .PushIncomingReceived:
-                      self.mCall = call
-                      self.isCallIncoming = true
-                      self.mProviderDelegate.incomingCall()
-                      self.sendEvent(eventName: "CallPushIncomingReceived")
-                default:
-                      NSLog("")
-                  }
+                        self.sendEvent(eventName: "CallConnected")
+                    case .StreamsRunning:
+                        // This state indicates the call is active.
+                        // You may reach this state multiple times, for example after a pause/resume
+                        // or after the ICE negotiation completes
+                        // Wait for the call to be connected before allowing a call update
+                        self.sendEvent(eventName: "CallStreamsRunning")
+                    case .Paused:
+                        self.sendEvent(eventName: "CallPaused")
+                    case .PausedByRemote:
+                        self.sendEvent(eventName: "CallPausedByRemote")
+                    case .Updating:
+                        // When we request a call update, for example when toggling video
+                        self.sendEvent(eventName: "CallUpdating")
+                    case .UpdatedByRemote:
+                        self.sendEvent(eventName: "CallUpdatedByRemote")
+                    case .Released:
+                        self.sendEvent(eventName: "CallReleased")
+                        self.stopCall()
+                    case .Error:
+                        self.sendEvent(eventName: "CallError")
+                        self.stopCall()
+                    case .End:
+                        self.sendEvent(eventName: "CallEnd")
+                        self.stopCall()
+                    case .PushIncomingReceived:
+                        self.mCall = call
+                        self.isCallIncoming = true
+                        self.mProviderDelegate.incomingCall()
+                        self.sendEvent(eventName: "CallPushIncomingReceived")
+                    default:
+                        NSLog("")
+                    }
                 },
                 onAudioDevicesListUpdated: { (core: Core) in
                     self.sendEvent(eventName: "AudioDevicesChanged")
                 },
-                onAccountRegistrationStateChanged: {(
-                    core: Core,
-                    account: Account,
-                    state: RegistrationState,
-                    message: String
-                ) in
+                onAccountRegistrationStateChanged: {
+                    (
+                        core: Core,
+                        account: Account,
+                        state: RegistrationState,
+                        message: String
+                    ) in
                     let coreMap: NSDictionary = [
                         "accountCreatorUrl": core.accountCreatorUrl,
                         "adaptiveRateAlgorithm": core.adaptiveRateAlgorithm,
@@ -159,21 +169,28 @@ class Sip: RCTEventEmitter {
                         "contactAddressPassword": account.contactAddress?.password as Any,
                     ]
 
-                    let body: NSDictionary = ["core": coreMap, "account": accountMap, "state": String(describing:state), "message": message]
-                    self.sendEvent(eventName: "AccountRegistrationStateChanged", body:body )
+                    let body: NSDictionary = [
+                        "core": coreMap, "account": accountMap, "state": String(describing: state),
+                        "message": message,
+                    ]
+                    self.sendEvent(eventName: "AccountRegistrationStateChanged", body: body)
 
                 })
             mCore.addDelegate(delegate: mRegistrationDelegate)
             resolve(true)
-        }}
+        }
+    }
 
     @objc(login:withPassword:withDomain:withTransport:withResolver:withRejecter:)
-    func login(username: String, password: String, domain: String, transport: Int ,resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
+    func login(
+        username: String, password: String, domain: String, transport: Int,
+        resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock
+    ) {
         do {
             var _transport = TransportType.Tcp
-            if (transport == 0) { _transport = TransportType.Udp }
-            if (transport == 2) { _transport = TransportType.Tls }
-            if (transport == 3) { _transport = TransportType.Dtls }
+            if transport == 0 { _transport = TransportType.Udp }
+            if transport == 2 { _transport = TransportType.Tls }
+            if transport == 3 { _transport = TransportType.Dtls }
 
             // To configure a SIP account, we need an Account object and an AuthInfo object
             // The first one is how to connect to the proxy server, the second one stores the credentials
@@ -182,14 +199,17 @@ class Sip: RCTEventEmitter {
             // userID is set to null as it's the same as the username in our case
             // ha1 is set to null as we are using the clear text password. Upon first register, the hash will be computed automatically.
             // The realm will be determined automatically from the first register, as well as the algorithm
-            let authInfo = try Factory.Instance.createAuthInfo(username: username, userid: "", passwd: password, ha1: "", realm: "", domain: domain)
+            let authInfo = try Factory.Instance.createAuthInfo(
+                username: username, userid: "", passwd: password, ha1: "", realm: "", domain: domain
+            )
 
             // Account object replaces deprecated ProxyConfig object
             // Account object is configured through an AccountParams object that we can obtain from the Core
             let accountParams = try mCore.createAccountParams()
 
             // A SIP account is identified by an identity address that we can construct from the username and domain
-            let identity = try Factory.Instance.createAddress(addr: String("sip:" + username + "@" + domain))
+            let identity = try Factory.Instance.createAddress(
+                addr: String("sip:" + username + "@" + domain))
             try! accountParams.setIdentityaddress(newValue: identity)
 
             // We also need to configure where the proxy server is located
@@ -198,10 +218,17 @@ class Sip: RCTEventEmitter {
             // We use the Address object to easily set the transport protocol
             try address.setTransport(newValue: _transport)
             try accountParams.setServeraddress(newValue: address)
+
             // And we ensure the account will start the registration process
             accountParams.registerEnabled = true
+            accountParams.realm = "*"
             accountParams.pushNotificationAllowed = true
             accountParams.pushNotificationConfig?.provider = "apns.dev"
+
+            mCore.setUserAgent(
+                name: "tokomni",
+                version: "V2.0.0"
+            )
 
             // Now that our AccountParams is configured, we can create the Account object
             let account = try mCore.createAccount(params: accountParams)
@@ -215,7 +242,8 @@ class Sip: RCTEventEmitter {
 
             resolve(nil)
 
-        } catch { NSLog(error.localizedDescription)
+        } catch {
+            NSLog(error.localizedDescription)
             reject("Login error", "Could not log in", error)
         }
     }
@@ -235,13 +263,17 @@ class Sip: RCTEventEmitter {
 
     @objc
     override func supportedEvents() -> [String]! {
-        return ["ConnectionRequested", "CallRequested", "CallRinging", "CallConnected", "CallStreamsRunning", "CallPaused", "CallPausedByRemote", "CallUpdating", "CallUpdatedByRemote", "CallReleased", "CallError", "AudioDevicesChanged",
-                "CallEnd", "CallPushIncomingReceived", "AccountRegistrationStateChanged", "IncomingReceived"]
+        return [
+            "ConnectionRequested", "CallRequested", "CallRinging", "CallConnected",
+            "CallStreamsRunning", "CallPaused", "CallPausedByRemote", "CallUpdating",
+            "CallUpdatedByRemote", "CallReleased", "CallError", "AudioDevicesChanged",
+            "CallEnd", "CallPushIncomingReceived", "AccountRegistrationStateChanged",
+            "IncomingReceived",
+        ]
     }
 
     @objc(unregister:withRejecter:)
-    func unregister(resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock)
-    {
+    func unregister(resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
         // Here we will disable the registration of our Account
         if let account = mCore.defaultAccount {
 
@@ -263,7 +295,7 @@ class Sip: RCTEventEmitter {
     func hangUp(resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
         NSLog("Trying to hang up")
         do {
-            if (mCore.callsNb == 0) { return }
+            if mCore.callsNb == 0 { return }
 
             // If the call state isn't paused, we can get it using core.currentCall
             // If the call state isn't paused, we can get it using core.currentCall
@@ -303,7 +335,9 @@ class Sip: RCTEventEmitter {
     }
 
     @objc(outgoingCall:withResolver:withRejecter:)
-    func outgoingCall(recipient: String, resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
+    func outgoingCall(
+        recipient: String, resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock
+    ) {
         do {
             // As for everything we need to get the SIP URI of the remote and convert it to an Address
             let remoteAddress = try Factory.Instance.createAddress(addr: recipient)
@@ -317,12 +351,17 @@ class Sip: RCTEventEmitter {
             params.mediaEncryption = MediaEncryption.None
             // If we wanted to start the call with video directly
             //params.videoEnabled = true
+            let callId = UUID()
+            params.addCustomHeader(headerName: "Call-ID", headerValue: callId.uuidString)
 
             // Finally we start the call
             let _ = mCore.inviteAddressWithParams(addr: remoteAddress, params: params)
+
+            mProviderDelegate.outgoingCall(uuid: callId, handle: recipient)
             // Call process can be followed in onCallStateChanged callback from core listener
             resolve(nil)
-        } catch { NSLog(error.localizedDescription)
+        } catch {
+            NSLog(error.localizedDescription)
             reject("Outgoing call failure", "Something has gone wrong", error)
         }
     }
@@ -350,19 +389,19 @@ class Sip: RCTEventEmitter {
         bluetoothMic = nil
 
         for audioDevice in mCore.audioDevices {
-            switch (audioDevice.type) {
+            switch audioDevice.type {
             case .Microphone:
                 microphone = audioDevice
             case .Earpiece:
                 earpiece = audioDevice
             case .Speaker:
-                if (audioDevice.hasCapability(capability: AudioDeviceCapabilities.CapabilityPlay)) {
+                if audioDevice.hasCapability(capability: AudioDeviceCapabilities.CapabilityPlay) {
                     loudSpeaker = audioDevice
                 } else {
                     loudMic = audioDevice
                 }
             case .Bluetooth:
-                if (audioDevice.hasCapability(capability: AudioDeviceCapabilities.CapabilityPlay)) {
+                if audioDevice.hasCapability(capability: AudioDeviceCapabilities.CapabilityPlay) {
                     bluetoothSpeaker = audioDevice
                 } else {
                     bluetoothMic = audioDevice
@@ -375,19 +414,20 @@ class Sip: RCTEventEmitter {
         let options: NSDictionary = [
             "phone": earpiece != nil && microphone != nil,
             "bluetooth": bluetoothMic != nil || bluetoothSpeaker != nil,
-            "loudspeaker": loudSpeaker != nil
+            "loudspeaker": loudSpeaker != nil,
         ]
 
         var current = "phone"
-        if (mCore.outputAudioDevice?.type == .Bluetooth || mCore.inputAudioDevice?.type == .Bluetooth) {
+        if mCore.outputAudioDevice?.type == .Bluetooth || mCore.inputAudioDevice?.type == .Bluetooth
+        {
             current = "bluetooth"
-        } else if (mCore.outputAudioDevice?.type == .Speaker) {
+        } else if mCore.outputAudioDevice?.type == .Speaker {
             current = "loudspeaker"
         }
 
         let result: NSDictionary = [
             "current": current,
-            "options": options
+            "options": options,
         ]
         resolve(result)
     }
@@ -396,9 +436,10 @@ class Sip: RCTEventEmitter {
     func sendDtmf(dtmf: String, resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
         do {
             try mCore.currentCall?.sendDtmf(dtmf: dtmf.utf8CString[0])
-            resolve(true) } catch {
-                reject("DTMF not recognised", "DTMF not recognised", error)
-            }
+            resolve(true)
+        } catch {
+            reject("DTMF not recognised", "DTMF not recognised", error)
+        }
     }
 
     @objc(toggleMute:withRejecter:)
