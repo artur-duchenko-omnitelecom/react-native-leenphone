@@ -18,7 +18,7 @@ class Sip: RCTEventEmitter {
     var isCallRunning: Bool = false
 
     /*------------ Callkit tutorial related variables ---------------*/
-    let incomingCallName = "Incoming call example"
+    let incomingCallName = "Incoming call"
     var mCall: Call?
     var mProviderDelegate: CallKitProviderDelegate!
     var mCallAlreadyStopped: Bool = false
@@ -101,6 +101,9 @@ class Sip: RCTEventEmitter {
                     case .Connected:
                         self.isCallIncoming = false
                         self.isCallRunning = true
+                        self.addCallStatsDelegate(
+                            call: call
+                        )
 
                         self.sendEvent(eventName: "CallConnected")
                     case .StreamsRunning:
@@ -118,15 +121,22 @@ class Sip: RCTEventEmitter {
                         self.sendEvent(eventName: "CallUpdating")
                     case .UpdatedByRemote:
                         self.sendEvent(eventName: "CallUpdatedByRemote")
-                    case .Released:
-                        self.sendEvent(eventName: "CallReleased")
+                    case .Released, .Error, .End:
+                        let eventName: String
+                        switch state {
+                        case .Released: eventName = "CallReleased"
+                        case .Error: eventName = "CallError"
+                        case .End: eventName = "CallEnd"
+                        default: eventName = "Unknown"
+                        }
+
+                        self.sendEvent(eventName: eventName)
                         self.stopCall()
-                    case .Error:
-                        self.sendEvent(eventName: "CallError")
-                        self.stopCall()
-                    case .End:
-                        self.sendEvent(eventName: "CallEnd")
-                        self.stopCall()
+
+                        if let statsDelegate = self.callStatsDelegate {
+                            call.removeDelegate(delegate: statsDelegate)
+                        }
+                        self.callStatsDelegate = nil
                     case .PushIncomingReceived:
                         self.mCall = call
                         self.isCallIncoming = true
@@ -134,16 +144,6 @@ class Sip: RCTEventEmitter {
                         self.sendEvent(eventName: "CallPushIncomingReceived")
                     default:
                         NSLog("")
-                    }
-                    if state == .Connected {
-                        self.addCallStatsDelegate(
-                            call: call
-                        )
-                    } else if state == .End {
-                        if let statsDelegate = self.callStatsDelegate {
-                            call.removeDelegate(delegate: statsDelegate)
-                        }
-                        self.callStatsDelegate = nil
                     }
                 },
                 onAudioDevicesListUpdated: { (core: Core) in
