@@ -7,13 +7,6 @@ class Sip: RCTEventEmitter {
     private var mRegistrationDelegate: CoreDelegate!
     private var callStatsDelegate: CallDelegate!
 
-    private var bluetoothMic: AudioDevice?
-    private var bluetoothSpeaker: AudioDevice?
-    private var earpiece: AudioDevice?
-    private var loudMic: AudioDevice?
-    private var loudSpeaker: AudioDevice?
-    private var microphone: AudioDevice?
-
     var isCallIncoming: Bool = false
     var isCallRunning: Bool = false
 
