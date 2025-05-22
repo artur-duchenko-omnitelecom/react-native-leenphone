@@ -31,7 +31,7 @@ RCT_EXTERN_METHOD(accept
                   : (RCTPromiseResolveBlock)resolve withRejecter
                   : (RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(reject
+RCT_EXTERN_METHOD(decline
                   : (RCTPromiseResolveBlock)resolve withRejecter
                   : (RCTPromiseRejectBlock)reject)
 
