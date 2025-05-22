@@ -5,6 +5,7 @@ import linphonesw
 class Sip: RCTEventEmitter {
     private var mCore: Core!
     private var mRegistrationDelegate: CoreDelegate!
+    private var callStatsDelegate: CallDelegate!
 
     private var bluetoothMic: AudioDevice?
     private var bluetoothSpeaker: AudioDevice?
@@ -134,6 +135,16 @@ class Sip: RCTEventEmitter {
                     default:
                         NSLog("")
                     }
+                    if state == .Connected {
+                        self.addCallStatsDelegate(
+                            call: call
+                        )
+                    } else if state == .End {
+                        if let statsDelegate = self.callStatsDelegate {
+                            call.removeDelegate(delegate: statsDelegate)
+                        }
+                        self.callStatsDelegate = nil
+                    }
                 },
                 onAudioDevicesListUpdated: { (core: Core) in
                     self.sendEvent(eventName: "AudioDevicesChanged")
@@ -179,6 +190,31 @@ class Sip: RCTEventEmitter {
             mCore.addDelegate(delegate: mRegistrationDelegate)
             resolve(true)
         }
+    }
+
+    func addCallStatsDelegate(
+        call: Call
+    ) {
+        callStatsDelegate = CallDelegateStub(
+            onStatsUpdated: {
+                (
+                    _: Call,
+                    stats: CallStats
+                ) in
+                self.sendEvent(
+                    withName: "SignalQualityChange",
+                    body: [
+                        "uploadBandwidth": stats.uploadBandwidth,
+                        "downloadBandwidth": stats.downloadBandwidth,
+                        "roundTripDelay": stats.roundTripDelay,
+                    ]
+                )
+            }
+        )
+
+        call.addDelegate(
+            delegate: callStatsDelegate
+        )
     }
 
     @objc(login:withPassword:withDomain:withTransport:withResolver:withRejecter:)
@@ -472,8 +508,8 @@ class Sip: RCTEventEmitter {
 
     @objc(getAudioDevices:withRejecter:)
     func getAudioDevices(
-        _ resolver: @escaping RCTPromiseResolveBlock,
-        reject rejecter: @escaping RCTPromiseRejectBlock
+        resolver: RCTPromiseResolveBlock,
+        reject: RCTPromiseRejectBlock
     ) {
 
         var values: [[String: String]] = []
@@ -516,18 +552,18 @@ class Sip: RCTEventEmitter {
         )
     }
 
-    @objc(changeAudioDevice:withResolver:withRejector:)
+    @objc(changeAudioDevice:withResolver:withRejecter:)
     func changeAudioDevice(
-        _ id: String,
-        resolve resolver: @escaping RCTPromiseResolveBlock,
-        reject rejecter: @escaping RCTPromiseRejectBlock
+        deviceId: String,
+        resolve: RCTPromiseResolveBlock,
+        reject: RCTPromiseRejectBlock
     ) {
         guard let currentCall = mCore.currentCall else {
             rejecter("no-call", "No current call to set audio device", nil)
             return
         }
 
-        guard let newDevice = mCore.audioDevices.first(where: { $0.id == id }) else {
+        guard let newDevice = mCore.audioDevices.first(where: { $0.id == deviceId }) else {
             rejecter("no-device", "No device with id \(id) found", nil)
             return
         }

@@ -55,6 +55,7 @@ interface Callbacks {
   onAccountRegistrationStateChanged?: (param: any) => void;
   onIncomingReceived?:() => void;
   onAudioDevicesChanged?: (param: any) => void;
+  onSignalQualityChange?:(param:any) => void;
 }
 
 export async function initialise(): Promise<void> {
@@ -143,7 +144,7 @@ export type AudioDeviceCapabilities =
   | 'CapabilityAll';
 
 export type GetAudioDevices = {
-  devices: AudioDevice[];
+  devices: CustomAudioDevice[];
   currentOutput: string;
   currentInput: string;
   muted: boolean;
