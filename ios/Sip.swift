@@ -508,7 +508,7 @@ class Sip: RCTEventEmitter {
 
     @objc(getAudioDevices:withRejecter:)
     func getAudioDevices(
-        resolver: RCTPromiseResolveBlock,
+        resolve: RCTPromiseResolveBlock,
         reject: RCTPromiseRejectBlock
     ) {
 
@@ -547,7 +547,7 @@ class Sip: RCTEventEmitter {
             "currentInput": mCore.currentCall?.inputAudioDevice?.id ?? "",
             "muted": !mCore.micEnabled,
         ]
-        resolver(
+        resolve(
             returned
         )
     }
@@ -559,17 +559,17 @@ class Sip: RCTEventEmitter {
         reject: RCTPromiseRejectBlock
     ) {
         guard let currentCall = mCore.currentCall else {
-            rejecter("no-call", "No current call to set audio device", nil)
+            reject("no-call", "No current call to set audio device", nil)
             return
         }
 
         guard let newDevice = mCore.audioDevices.first(where: { $0.id == deviceId }) else {
-            rejecter("no-device", "No device with id \(id) found", nil)
+            reject("no-device", "No device with id \(id) found", nil)
             return
         }
 
         if newDevice.id == currentCall.outputAudioDevice?.id {
-            resolver(["message": "Device already selected", "id": id])
+            resolve(["message": "Device already selected", "id": id])
             return
         }
 
@@ -589,7 +589,7 @@ class Sip: RCTEventEmitter {
             ]
         )
 
-        resolver(["message": "Device set", "id": id])
+        resolve(["message": "Device set", "id": id])
     }
 
     @objc(sendDtmf:withResolver:withRejecter:)
