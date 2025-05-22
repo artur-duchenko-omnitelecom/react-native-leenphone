@@ -357,7 +357,6 @@ class Sip: RCTEventEmitter {
     func acceptCall() {
         do {
             guard let call = mCore.currentCall else {
-                reject("No call", "No call to accept", nil)
                 return
             }
 
@@ -367,7 +366,6 @@ class Sip: RCTEventEmitter {
             try call.accept()
         } catch {
             NSLog("Accept error: \(error.localizedDescription)")
-            reject("Call accept failed", "Call accept failed", error)
         }
     }
 
@@ -457,8 +455,8 @@ class Sip: RCTEventEmitter {
 
         let returned: [String: Any] = [
             "devices": values,
-            "currentOutput": self.mCall.outputAudioDevice?.id ?? "",
-            "currentInput": self.mCall.inputAudioDevice?.id ?? "",
+            "currentOutput": self.mCall?.outputAudioDevice?.id ?? "",
+            "currentInput": self.mCall?.inputAudioDevice?.id ?? "",
             "muted": !self.mCore.micEnabled,
         ]
         resolve(
@@ -477,17 +475,17 @@ class Sip: RCTEventEmitter {
             return
         }
 
-        if newDevice.id == currentCall.outputAudioDevice?.id {
+        if newDevice.id == self.mCall?.outputAudioDevice?.id {
             resolve(["message": "Device already selected", "id": deviceId])
             return
         }
 
         self.configureAudioSession()
 
-        self.mCall.outputAudioDevice = newDevice
+        self.mCall?.outputAudioDevice = newDevice
 
         if newDevice.capabilities.contains(.CapabilityAll) {
-            self.mCall.inputAudioDevice = newDevice
+            self.mCall?.inputAudioDevice = newDevice
         }
 
         self.sendEvent(
