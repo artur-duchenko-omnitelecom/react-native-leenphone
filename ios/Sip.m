@@ -65,4 +65,12 @@ RCT_EXTERN_METHOD(toggleMute
                   : (RCTPromiseResolveBlock)resolve withRejecter
                   : (RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(getAudioDevices
+                  : (RCTPromiseResolveBlock)resolve withRejecter
+                  : (RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(setAudioDevice
+                  : (NSString *)deviceId withResolver
+                  : (RCTPromiseResolveBlock)resolve withRejecter
+                  : (RCTPromiseRejectBlock)reject)
 @end

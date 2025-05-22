@@ -470,6 +470,92 @@ class Sip: RCTEventEmitter {
         resolve(result)
     }
 
+    @objc(getAudioDevices:withRejecter:)
+    func getAudioDevices(
+        _ resolver: @escaping RCTPromiseResolveBlock,
+        reject rejecter: @escaping RCTPromiseRejectBlock
+    ) {
+
+        var values: [[String: String]] = []
+
+        for device in mCore.audioDevices {
+            let capabilities = {
+                switch device.capabilities {
+                case .CapabilityPlay:
+                    return "CapabilityPlay"
+                case .CapabilityRecord:
+                    return "CapabilityRecord"
+                default:
+                    return "CapabilityAll"
+                }
+            }()
+
+            let mappedDevice: [String: String] = [
+                "name": device.deviceName,
+                "driverName": device.driverName,
+                "id": device.id,
+                "type": String(
+                    describing: device.type
+                ),
+                "capabilities": capabilities,
+            ]
+
+            values.append(
+                mappedDevice
+            )
+        }
+
+        let returned: [String: Any] = [
+            "devices": values,
+            "currentOutput": mCore.currentCall?.outputAudioDevice?.id ?? "",
+            "currentInput": mCore.currentCall?.inputAudioDevice?.id ?? "",
+            "muted": !mCore.micEnabled,
+        ]
+        resolver(
+            returned
+        )
+    }
+
+    @objc(setAudioDevice:withResolver:withRejector:)
+    func setAudioDevice(
+        _ id: String,
+        resolve resolver: @escaping RCTPromiseResolveBlock,
+        reject rejecter: @escaping RCTPromiseRejectBlock
+    ) {
+        guard let currentCall = mCore.currentCall else {
+            rejecter("no-call", "No current call to set audio device", nil)
+            return
+        }
+
+        guard let newDevice = mCore.audioDevices.first(where: { $0.id == id }) else {
+            rejecter("no-device", "No device with id \(id) found", nil)
+            return
+        }
+
+        if newDevice.id == currentCall.outputAudioDevice?.id {
+            resolver(["message": "Device already selected", "id": id])
+            return
+        }
+
+        self.configureAudioSession()
+
+        currentCall.outputAudioDevice = newDevice
+
+        if newDevice.capabilities.contains(.CapabilityAll) {
+            currentCall.inputAudioDevice = newDevice
+        }
+
+        self.sendEvent(
+            withName: "callstate",
+            body: [
+                "message": newDevice.id,
+                "state": "audiodevicechange",
+            ]
+        )
+
+        resolver(["message": "Device set", "id": id])
+    }
+
     @objc(sendDtmf:withResolver:withRejecter:)
     func sendDtmf(dtmf: String, resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
         do {

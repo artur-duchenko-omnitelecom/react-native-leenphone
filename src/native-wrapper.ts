@@ -115,6 +115,40 @@ export interface AudioDevices {
   current: AudioDevice;
 }
 
+export type AudioDeviceType =
+  | 'Unknown'
+  | 'Microphone'
+  | 'Earpiece'
+  | 'Speaker'
+  | 'Bluetooth'
+  | 'BluetoothA2DP'
+  | 'Telephony'
+  | 'AuxLine'
+  | 'GenericUsb'
+  | 'Headset'
+  | 'Headphones'
+  | 'HearingAid';
+
+export type CustomAudioDevice = {
+  id: string;
+  name: string;
+  driverName: string;
+  capabilities: AudioDeviceCapabilities;
+  type: AudioDeviceType;
+};
+
+export type AudioDeviceCapabilities =
+  | 'CapabilityRecord'
+  | 'CapabilityPlay'
+  | 'CapabilityAll';
+
+export type GetAudioDevices = {
+  devices: AudioDevice[];
+  currentOutput: string;
+  currentInput: string;
+  muted: boolean;
+};
+
 export function useAudioDevices(
   callback: (device: AudioDevices) => void
 ): void {
@@ -150,4 +184,17 @@ export async function getMicStatus(): Promise<boolean> {
 
 export async function toggleMute(): Promise<boolean> {
   return Sip.toggleMute();
+}
+
+export async function getAudioDevices(): Promise<GetAudioDevices> {
+  return Sip.getAudioDevices();
+}
+
+export type ChangeAudioDevice = {
+  message: string;
+  id: string
+}
+
+export async function changeAudioDevice(deviceId: string): Promise<ChangeAudioDevice> {
+  return Sip.setAudioDevice(deviceId);
 }
