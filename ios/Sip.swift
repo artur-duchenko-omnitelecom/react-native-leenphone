@@ -51,7 +51,7 @@ class Sip: RCTEventEmitter {
     @objc(initialise:withRejecter:)
     func initialise(resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
         do {
-            LoggingService.Instance.logLevel = LogLevel.Debug
+            LoggingService.Instance.logLevel = LogLevel.Warning
 
             try? mCore = Factory.Instance.createCore(
                 configPath: "", factoryConfigPath: "", systemContext: nil)
@@ -323,6 +323,7 @@ class Sip: RCTEventEmitter {
                 return
             }
             try call.decline(reason: Reason.Busy)
+            self.mProviderDelegate.stopCall()
             resolve(nil)
         } catch {
             NSLog("Decline error: \(error.localizedDescription)")
@@ -343,7 +344,7 @@ class Sip: RCTEventEmitter {
             mCore.configureAudioSession()
 
             try call.accept()
-
+            self.mProviderDelegate.acceptCall()
             resolve(nil)
         } catch {
             NSLog("Accept error: \(error.localizedDescription)")

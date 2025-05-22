@@ -67,13 +67,43 @@ class CallKitProviderDelegate: NSObject {
         }
     }
 
-    func stopCall() {
-        let endCallAction = CXEndCallAction(call: callUUID)
-        let transaction = CXTransaction(action: endCallAction)
+    // Accept incoming call
+    func acceptCall() {
+        guard let uuid = callUUID else {
+            print("❌ callUUID is nil. Cannot accept call.")
+            return
+        }
 
-        mCallController.request(transaction, completion: { error in })  // Report to CallKit a call must end
+        let acceptCallAction = CXAnswerCallAction(call: uuid)
+        let transaction = CXTransaction(action: acceptCallAction)
+
+        mCallController.request(transaction) { error in
+            if let error = error {
+                print("❌ Error accepting call: \(error.localizedDescription)")
+            } else {
+                print("✅ Call accepted")
+            }
+        }
     }
 
+    // End/decline call
+    func stopCall() {
+        guard let uuid = callUUID else {
+            print("❌ callUUID is nil. Cannot end call.")
+            return
+        }
+
+        let endCallAction = CXEndCallAction(call: uuid)
+        let transaction = CXTransaction(action: endCallAction)
+
+        mCallController.request(transaction) { error in
+            if let error = error {
+                print("❌ Error ending call: \(error.localizedDescription)")
+            } else {
+                print("✅ Call ended")
+            }
+        }
+    }
 }
 
 // In this extension, we implement the action we want to be done when CallKit is notified of something.
