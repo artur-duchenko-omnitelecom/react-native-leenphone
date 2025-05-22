@@ -304,7 +304,7 @@ class Sip: RCTEventEmitter {
             "CallStreamsRunning", "CallPaused", "CallPausedByRemote", "CallUpdating",
             "CallUpdatedByRemote", "CallReleased", "CallError", "AudioDevicesChanged",
             "CallEnd", "CallPushIncomingReceived", "AccountRegistrationStateChanged",
-            "IncomingReceived",
+            "IncomingReceived", "SignalQualityChange",
         ]
     }
 
