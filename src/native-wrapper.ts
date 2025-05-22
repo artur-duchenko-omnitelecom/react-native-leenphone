@@ -196,5 +196,5 @@ export type ChangeAudioDevice = {
 }
 
 export async function changeAudioDevice(deviceId: string): Promise<ChangeAudioDevice> {
-  return Sip.setAudioDevice(deviceId);
+  return Sip.changeAudioDevice(deviceId);
 }

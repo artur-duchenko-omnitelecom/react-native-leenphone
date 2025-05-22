@@ -516,8 +516,8 @@ class Sip: RCTEventEmitter {
         )
     }
 
-    @objc(setAudioDevice:withResolver:withRejector:)
-    func setAudioDevice(
+    @objc(changeAudioDevice:withResolver:withRejector:)
+    func changeAudioDevice(
         _ id: String,
         resolve resolver: @escaping RCTPromiseResolveBlock,
         reject rejecter: @escaping RCTPromiseRejectBlock
