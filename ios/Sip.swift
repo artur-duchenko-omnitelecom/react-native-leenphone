@@ -582,10 +582,9 @@ class Sip: RCTEventEmitter {
         }
 
         self.sendEvent(
-            withName: "callstate",
+            withName: "AudioDevicesChanged",
             body: [
-                "message": newDevice.id,
-                "state": "audiodevicechange",
+                "message": newDevice.id
             ]
         )
 
