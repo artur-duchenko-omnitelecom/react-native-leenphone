@@ -54,6 +54,7 @@ interface Callbacks {
   onCallPushIncomingReceived?: () => void;
   onAccountRegistrationStateChanged?: (param: any) => void;
   onIncomingReceived?:() => void;
+  onAudioDevicesChanged?: (param: any) => void;
 }
 
 export async function initialise(): Promise<void> {
@@ -147,6 +148,6 @@ export async function getMicStatus(): Promise<boolean> {
   return Sip.micEnabled();
 }
 
-export async function toggleMute(): Promise<void> {
+export async function toggleMute(): Promise<boolean> {
   return Sip.toggleMute();
 }
