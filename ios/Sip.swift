@@ -320,6 +320,7 @@ class Sip: RCTEventEmitter {
         do {
             guard let call = mCore.currentCall else {
                 reject("No call", "No call to decline", nil)
+                return
             }
             try call.decline(reason: Reason.Busy)
             resolve(nil)
@@ -333,9 +334,9 @@ class Sip: RCTEventEmitter {
     func accept(resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
         NSLog("Trying to accept call")
         do {
-            guard let call = self.core.currentCall else {
-                NSLog("No call to accept")
+            guard let call = mCore.currentCall else {
                 reject("No call", "No call to accept", nil)
+                return
             }
 
             // Configure audio session before accepting call
