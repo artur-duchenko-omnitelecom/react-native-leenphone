@@ -314,6 +314,42 @@ class Sip: RCTEventEmitter {
         }
     }
 
+    @objc(decline:withRejecter:)
+    func decline(resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
+        NSLog("Trying to decline call")
+        do {
+            guard let call = mCore.currentCall else {
+                reject("No call", "No call to decline", nil)
+            }
+            try call.decline(reason: Reason.Busy)
+            resolve(nil)
+        } catch {
+            NSLog("Decline error: \(error.localizedDescription)")
+            reject("Call decline failed", "Call decline failed", error)
+        }
+    }
+
+    @objc(accept:withRejecter:)
+    func accept(resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
+        NSLog("Trying to accept call")
+        do {
+            guard let call = self.core.currentCall else {
+                NSLog("No call to accept")
+                reject("No call", "No call to accept", nil)
+            }
+
+            // Configure audio session before accepting call
+            mCore.configureAudioSession()
+
+            try call.accept()
+
+            resolve(nil)
+        } catch {
+            NSLog("Accept error: \(error.localizedDescription)")
+            reject("Call accept failed", "Call accept failed", error)
+        }
+    }
+
     @objc(loudAudio:withRejecter:)
     func loudAudio(resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
         if let mic = loudMic {

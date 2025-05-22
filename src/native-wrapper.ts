@@ -53,6 +53,7 @@ interface Callbacks {
   onCallEnd?: () => void;
   onCallPushIncomingReceived?: () => void;
   onAccountRegistrationStateChanged?: (param: any) => void;
+  onIncomingReceived?:() => void;
 }
 
 export async function initialise(): Promise<void> {
@@ -88,6 +89,14 @@ export function useCall(callbacks: Callbacks = {}): void {
 
 export async function call(remoteUri: string): Promise<void> {
   return Sip.outgoingCall(remoteUri);
+}
+
+export async function accept(): Promise<void> {
+  return Sip.accept();
+}
+
+export async function decline(): Promise<void> {
+  return Sip.decline();
 }
 
 export async function hangup(): Promise<void> {
