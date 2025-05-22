@@ -330,42 +330,25 @@ class Sip: RCTEventEmitter {
         }
     }
 
-    func declineCall() {
-        do {
-            guard let call = mCore.currentCall else {
-                return
-            }
-            try call.decline(reason: Reason.Busy)
-            self.mProviderDelegate.stopCall()
-        } catch {
-            NSLog("Decline error: \(error.localizedDescription)")
-        }
-    }
-
     @objc(decline:withRejecter:)
     func decline(resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
         NSLog("Trying to decline call")
         do {
-            self.mProviderDelegate.stopCall()
-            resolve(nil)
-        } catch {
-            NSLog("Decline error: \(error.localizedDescription)")
-            reject("Call decline failed", "Call decline failed", error)
-        }
-    }
+            if mCore.callsNb == 0 { return }
 
-    func acceptCall() {
-        do {
-            guard let call = mCore.currentCall else {
-                return
+            // If the call state isn't paused, we can get it using core.currentCall
+            // If the call state isn't paused, we can get it using core.currentCall
+            self.mCall = (mCore.currentCall != nil) ? mCore.currentCall : mCore.calls[0]
+
+            // Terminating a call is quite simple
+            if let call = self.mCall {
+                try call.decline()
+            } else {
+                reject("No call", "No call to decline", nil)
             }
-
-            // Configure audio session before accepting call
-            mCore.configureAudioSession()
-
-            try call.accept()
         } catch {
-            NSLog("Accept error: \(error.localizedDescription)")
+            NSLog(error.localizedDescription)
+            reject("Call decline failed", "Call termination failed", error)
         }
     }
 
@@ -373,11 +356,22 @@ class Sip: RCTEventEmitter {
     func accept(resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
         NSLog("Trying to accept call")
         do {
-            self.mProviderDelegate.acceptCall()
-            resolve(nil)
+            if mCore.callsNb == 0 { return }
+
+            // If the call state isn't paused, we can get it using core.currentCall
+            // If the call state isn't paused, we can get it using core.currentCall
+            self.mCall = (mCore.currentCall != nil) ? mCore.currentCall : mCore.calls[0]
+
+            // Terminating a call is quite simple
+            if let call = self.mCall {
+                try call.accept()
+                self.isCallRunning = true
+            } else {
+                reject("No call", "No call to accept", nil)
+            }
         } catch {
-            NSLog("Accept error: \(error.localizedDescription)")
-            reject("Call accept failed", "Call accept failed", error)
+            NSLog(error.localizedDescription)
+            reject("Call accept failed", "Call termination failed", error)
         }
     }
 
@@ -409,7 +403,7 @@ class Sip: RCTEventEmitter {
             // Finally we start the call
             let _ = mCore.inviteAddressWithParams(addr: remoteAddress, params: params)
 
-            mProviderDelegate.outgoingCall(uuid: callId, handle: recipient)
+            self.mProviderDelegate.outgoingCall(uuid: callId, handle: recipient)
             // Call process can be followed in onCallStateChanged callback from core listener
             resolve(nil)
         } catch {

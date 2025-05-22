@@ -1,6 +1,6 @@
 {
   "name": "react-native-leenphone",
-  "version": "0.5.57",
+  "version": "0.5.58",
   "description": "Make SIP calls from react-native using Linphone SDK",
   "main": "lib/commonjs/index",
   "module": "lib/module/index",
