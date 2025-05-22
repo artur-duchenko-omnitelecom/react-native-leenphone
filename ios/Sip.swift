@@ -7,6 +7,13 @@ class Sip: RCTEventEmitter {
     private var mRegistrationDelegate: CoreDelegate!
     private var callStatsDelegate: CallDelegate!
 
+    private var bluetoothMic: AudioDevice?
+    private var bluetoothSpeaker: AudioDevice?
+    private var earpiece: AudioDevice?
+    private var loudMic: AudioDevice?
+    private var loudSpeaker: AudioDevice?
+    private var microphone: AudioDevice?
+
     var isCallIncoming: Bool = false
     var isCallRunning: Bool = false
 
@@ -361,14 +368,8 @@ class Sip: RCTEventEmitter {
             // If the call state isn't paused, we can get it using core.currentCall
             // If the call state isn't paused, we can get it using core.currentCall
             self.mCall = (mCore.currentCall != nil) ? mCore.currentCall : mCore.calls[0]
-
-            // Terminating a call is quite simple
-            if let call = self.mCall {
-                try call.accept()
-                self.isCallRunning = true
-            } else {
-                reject("No call", "No call to accept", nil)
-            }
+            self.isCallRunning = true
+            self.mProviderDelegate.acceptCall()
         } catch {
             NSLog(error.localizedDescription)
             reject("Call accept failed", "Call termination failed", error)
@@ -500,6 +501,100 @@ class Sip: RCTEventEmitter {
         } catch {
             reject("DTMF not recognised", "DTMF not recognised", error)
         }
+    }
+
+    @objc(bluetoothAudio:withRejecter:)
+    func bluetoothAudio(resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
+        if let mic = self.bluetoothMic {
+            mCore.inputAudioDevice = mic
+        }
+
+        if let speaker = self.bluetoothSpeaker {
+            mCore.outputAudioDevice = speaker
+        }
+
+        resolve(true)
+    }
+
+    @objc(loudAudio:withRejecter:)
+    func loudAudio(resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
+        if let mic = loudMic {
+            mCore.inputAudioDevice = mic
+        } else if let mic = self.microphone {
+            mCore.inputAudioDevice = mic
+        }
+
+        if let speaker = loudSpeaker {
+            mCore.outputAudioDevice = speaker
+        }
+
+        resolve(true)
+    }
+
+    @objc(phoneAudio:withRejecter:)
+    func phoneAudio(resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
+        if let mic = microphone {
+            mCore.inputAudioDevice = mic
+        }
+
+        if let speaker = earpiece {
+            mCore.outputAudioDevice = speaker
+        }
+
+        resolve(true)
+    }
+
+    @objc(scanAudioDevices:withRejecter:)
+    func scanAudioDevices(resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
+        microphone = nil
+        earpiece = nil
+        loudSpeaker = nil
+        loudMic = nil
+        bluetoothSpeaker = nil
+        bluetoothMic = nil
+
+        for audioDevice in mCore.audioDevices {
+            switch audioDevice.type {
+            case .Microphone:
+                microphone = audioDevice
+            case .Earpiece:
+                earpiece = audioDevice
+            case .Speaker:
+                if audioDevice.hasCapability(capability: AudioDeviceCapabilities.CapabilityPlay) {
+                    loudSpeaker = audioDevice
+                } else {
+                    loudMic = audioDevice
+                }
+            case .Bluetooth:
+                if audioDevice.hasCapability(capability: AudioDeviceCapabilities.CapabilityPlay) {
+                    bluetoothSpeaker = audioDevice
+                } else {
+                    bluetoothMic = audioDevice
+                }
+            default:
+                NSLog("Audio device not recognised.")
+            }
+        }
+
+        let options: NSDictionary = [
+            "phone": earpiece != nil && microphone != nil,
+            "bluetooth": bluetoothMic != nil || bluetoothSpeaker != nil,
+            "loudspeaker": loudSpeaker != nil,
+        ]
+
+        var current = "phone"
+        if mCore.outputAudioDevice?.type == .Bluetooth || mCore.inputAudioDevice?.type == .Bluetooth
+        {
+            current = "bluetooth"
+        } else if mCore.outputAudioDevice?.type == .Speaker {
+            current = "loudspeaker"
+        }
+
+        let result: NSDictionary = [
+            "current": current,
+            "options": options,
+        ]
+        resolve(result)
     }
 
     @objc(toggleMute:withRejecter:)

@@ -128,15 +128,9 @@ extension CallKitProviderDelegate: CXProviderDelegate {
             // It is worth to note that an application does not have permission to configure the
             // AVAudioSession outside of this delegate action while it is running in background,
             // which is usually the case in an incoming call scenario.
-            tutorialContext.accept(
-                resolve: { result in
-                    print("Accept call success: \(result ?? "no result")")
-                },
-                reject: { code, message, error in
-                    print("Accept call failed: \(message ?? "Unknown error")")
-                })
+            tutorialContext.configureAudioSession()
+            try tutorialContext.mCall?.accept()
             tutorialContext.isCallRunning = true
-            tutorialContext.isCallIncoming = true
         } catch {
             print(error)
         }

@@ -161,6 +161,38 @@ export type ChangeAudioDevice = {
   id: string
 }
 
-export async function setAudioDevice(deviceId: string): Promise<ChangeAudioDevice> {
-  return Sip.setAudioDevice(deviceId);
+export type AudioDevice = 'bluetooth' | 'phone' | 'loudspeaker';
+
+export interface AudioDevices {
+  options: { [device in AudioDevice]: boolean };
+  current: AudioDevice;
+}
+
+export function useAudioDevices(
+  callback: (device: AudioDevices) => void
+): void {
+  const scanAudioDevices = React.useCallback(
+    () => Sip.scanAudioDevices().then(callback),
+    [callback]
+  );
+
+  React.useEffect(() => {
+    const eventEmitter = new NativeEventEmitter(Sip);
+
+    const deviceListener = eventEmitter.addListener(
+      'AudioDevicesChanged',
+      scanAudioDevices
+    );
+    return () => deviceListener.remove();
+  }, []);
+
+  React.useEffect(() => {
+    scanAudioDevices();
+  }, []);
+}
+
+export async function setAudioDevice(device: AudioDevice) {
+  if (device === 'bluetooth') return Sip.bluetoothAudio();
+  if (device === 'loudspeaker') return Sip.loudAudio();
+  if (device === 'phone') return Sip.phoneAudio();
 }
