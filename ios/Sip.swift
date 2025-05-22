@@ -564,12 +564,12 @@ class Sip: RCTEventEmitter {
         }
 
         guard let newDevice = mCore.audioDevices.first(where: { $0.id == deviceId }) else {
-            reject("no-device", "No device with id \(id) found", nil)
+            reject("no-device", "No device with id \(deviceId) found", nil)
             return
         }
 
         if newDevice.id == currentCall.outputAudioDevice?.id {
-            resolve(["message": "Device already selected", "id": id])
+            resolve(["message": "Device already selected", "id": deviceId])
             return
         }
 
@@ -589,7 +589,7 @@ class Sip: RCTEventEmitter {
             ]
         )
 
-        resolve(["message": "Device set", "id": id])
+        resolve(["message": "Device set", "id": deviceId])
     }
 
     @objc(sendDtmf:withResolver:withRejecter:)
