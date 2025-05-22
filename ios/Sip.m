@@ -15,10 +15,6 @@ RCT_EXTERN_METHOD(login
                   : (RCTPromiseResolveBlock)resolve withRejecter
                   : (RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(bluetoothAudio
-                  : (RCTPromiseResolveBlock)resolve withRejecter
-                  : (RCTPromiseRejectBlock)reject)
-
 RCT_EXTERN_METHOD(unregister
                   : (RCTPromiseResolveBlock)resolve withRejecter
                   : (RCTPromiseRejectBlock)reject)
@@ -35,24 +31,12 @@ RCT_EXTERN_METHOD(decline
                   : (RCTPromiseResolveBlock)resolve withRejecter
                   : (RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(loudAudio
-                  : (RCTPromiseResolveBlock)resolve withRejecter
-                  : (RCTPromiseRejectBlock)reject)
-
 RCT_EXTERN_METHOD(micEnabled
                   : (RCTPromiseResolveBlock)resolve withRejecter
                   : (RCTPromiseRejectBlock)reject)
 
 RCT_EXTERN_METHOD(outgoingCall
                   : (NSString *)recipient withResolver
-                  : (RCTPromiseResolveBlock)resolve withRejecter
-                  : (RCTPromiseRejectBlock)reject)
-
-RCT_EXTERN_METHOD(phoneAudio
-                  : (RCTPromiseResolveBlock)resolve withRejecter
-                  : (RCTPromiseRejectBlock)reject)
-
-RCT_EXTERN_METHOD(scanAudioDevices
                   : (RCTPromiseResolveBlock)resolve withRejecter
                   : (RCTPromiseRejectBlock)reject)
 
@@ -69,7 +53,7 @@ RCT_EXTERN_METHOD(getAudioDevices
                   : (RCTPromiseResolveBlock)resolve withRejecter
                   : (RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(changeAudioDevice
+RCT_EXTERN_METHOD(setAudioDevice
                   : (NSString *)deviceId withResolver
                   : (RCTPromiseResolveBlock)resolve withRejecter
                   : (RCTPromiseRejectBlock)reject)

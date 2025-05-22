@@ -109,13 +109,6 @@ export async function sendDtmf(dtmf: string): Promise<void> {
   return Sip.sendDtmf(dtmf);
 }
 
-export type AudioDevice = 'bluetooth' | 'phone' | 'loudspeaker';
-
-export interface AudioDevices {
-  options: { [device in AudioDevice]: boolean };
-  current: AudioDevice;
-}
-
 export type AudioDeviceType =
   | 'Unknown'
   | 'Microphone'
@@ -150,34 +143,6 @@ export type GetAudioDevices = {
   muted: boolean;
 };
 
-export function useAudioDevices(
-  callback: (device: AudioDevices) => void
-): void {
-  const scanAudioDevices = React.useCallback(
-    () => Sip.scanAudioDevices().then(callback),
-    [callback]
-  );
-
-  React.useEffect(() => {
-    const eventEmitter = new NativeEventEmitter(Sip);
-
-    const deviceListener = eventEmitter.addListener(
-      'AudioDevicesChanged',
-      scanAudioDevices
-    );
-    return () => deviceListener.remove();
-  }, []);
-
-  React.useEffect(() => {
-    scanAudioDevices();
-  }, []);
-}
-
-export async function setAudioDevice(device: AudioDevice) {
-  if (device === 'bluetooth') return Sip.bluetoothAudio();
-  if (device === 'loudspeaker') return Sip.loudAudio();
-  if (device === 'phone') return Sip.phoneAudio();
-}
 
 export async function getMicStatus(): Promise<boolean> {
   return Sip.micEnabled();
@@ -196,6 +161,6 @@ export type ChangeAudioDevice = {
   id: string
 }
 
-export async function changeAudioDevice(deviceId: string): Promise<ChangeAudioDevice> {
-  return Sip.changeAudioDevice(deviceId);
+export async function setAudioDevice(deviceId: string): Promise<ChangeAudioDevice> {
+  return Sip.setAudioDevice(deviceId);
 }

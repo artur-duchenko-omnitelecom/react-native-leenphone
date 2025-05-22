@@ -284,19 +284,6 @@ class Sip: RCTEventEmitter {
         }
     }
 
-    @objc(bluetoothAudio:withRejecter:)
-    func bluetoothAudio(resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
-        if let mic = self.bluetoothMic {
-            mCore.inputAudioDevice = mic
-        }
-
-        if let speaker = self.bluetoothSpeaker {
-            mCore.outputAudioDevice = speaker
-        }
-
-        resolve(true)
-    }
-
     @objc
     override func supportedEvents() -> [String]! {
         return [
@@ -350,15 +337,22 @@ class Sip: RCTEventEmitter {
         }
     }
 
+    func declineCall() {
+        do {
+            guard let call = mCore.currentCall else {
+                return
+            }
+            try call.decline(reason: Reason.Busy)
+            self.mProviderDelegate.stopCall()
+        } catch {
+            NSLog("Decline error: \(error.localizedDescription)")
+        }
+    }
+
     @objc(decline:withRejecter:)
     func decline(resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
         NSLog("Trying to decline call")
         do {
-            guard let call = mCore.currentCall else {
-                reject("No call", "No call to decline", nil)
-                return
-            }
-            try call.decline(reason: Reason.Busy)
             self.mProviderDelegate.stopCall()
             resolve(nil)
         } catch {
@@ -367,9 +361,7 @@ class Sip: RCTEventEmitter {
         }
     }
 
-    @objc(accept:withRejecter:)
-    func accept(resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
-        NSLog("Trying to accept call")
+    func acceptCall() {
         do {
             guard let call = mCore.currentCall else {
                 reject("No call", "No call to accept", nil)
@@ -380,27 +372,22 @@ class Sip: RCTEventEmitter {
             mCore.configureAudioSession()
 
             try call.accept()
-            self.mProviderDelegate.acceptCall()
-            resolve(nil)
         } catch {
             NSLog("Accept error: \(error.localizedDescription)")
             reject("Call accept failed", "Call accept failed", error)
         }
     }
 
-    @objc(loudAudio:withRejecter:)
-    func loudAudio(resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
-        if let mic = loudMic {
-            mCore.inputAudioDevice = mic
-        } else if let mic = self.microphone {
-            mCore.inputAudioDevice = mic
+    @objc(accept:withRejecter:)
+    func accept(resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
+        NSLog("Trying to accept call")
+        do {
+            self.mProviderDelegate.acceptCall()
+            resolve(nil)
+        } catch {
+            NSLog("Accept error: \(error.localizedDescription)")
+            reject("Call accept failed", "Call accept failed", error)
         }
-
-        if let speaker = loudSpeaker {
-            mCore.outputAudioDevice = speaker
-        }
-
-        resolve(true)
     }
 
     @objc(micEnabled:withRejecter:)
@@ -440,72 +427,6 @@ class Sip: RCTEventEmitter {
         }
     }
 
-    @objc(phoneAudio:withRejecter:)
-    func phoneAudio(resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
-        if let mic = microphone {
-            mCore.inputAudioDevice = mic
-        }
-
-        if let speaker = earpiece {
-            mCore.outputAudioDevice = speaker
-        }
-
-        resolve(true)
-    }
-
-    @objc(scanAudioDevices:withRejecter:)
-    func scanAudioDevices(resolve: RCTPromiseResolveBlock, reject: RCTPromiseRejectBlock) {
-        microphone = nil
-        earpiece = nil
-        loudSpeaker = nil
-        loudMic = nil
-        bluetoothSpeaker = nil
-        bluetoothMic = nil
-
-        for audioDevice in mCore.audioDevices {
-            switch audioDevice.type {
-            case .Microphone:
-                microphone = audioDevice
-            case .Earpiece:
-                earpiece = audioDevice
-            case .Speaker:
-                if audioDevice.hasCapability(capability: AudioDeviceCapabilities.CapabilityPlay) {
-                    loudSpeaker = audioDevice
-                } else {
-                    loudMic = audioDevice
-                }
-            case .Bluetooth:
-                if audioDevice.hasCapability(capability: AudioDeviceCapabilities.CapabilityPlay) {
-                    bluetoothSpeaker = audioDevice
-                } else {
-                    bluetoothMic = audioDevice
-                }
-            default:
-                NSLog("Audio device not recognised.")
-            }
-        }
-
-        let options: NSDictionary = [
-            "phone": earpiece != nil && microphone != nil,
-            "bluetooth": bluetoothMic != nil || bluetoothSpeaker != nil,
-            "loudspeaker": loudSpeaker != nil,
-        ]
-
-        var current = "phone"
-        if mCore.outputAudioDevice?.type == .Bluetooth || mCore.inputAudioDevice?.type == .Bluetooth
-        {
-            current = "bluetooth"
-        } else if mCore.outputAudioDevice?.type == .Speaker {
-            current = "loudspeaker"
-        }
-
-        let result: NSDictionary = [
-            "current": current,
-            "options": options,
-        ]
-        resolve(result)
-    }
-
     @objc(getAudioDevices:withRejecter:)
     func getAudioDevices(
         resolve: RCTPromiseResolveBlock,
@@ -543,26 +464,21 @@ class Sip: RCTEventEmitter {
 
         let returned: [String: Any] = [
             "devices": values,
-            "currentOutput": mCore.currentCall?.outputAudioDevice?.id ?? "",
-            "currentInput": mCore.currentCall?.inputAudioDevice?.id ?? "",
-            "muted": !mCore.micEnabled,
+            "currentOutput": self.mCall.outputAudioDevice?.id ?? "",
+            "currentInput": self.mCall.inputAudioDevice?.id ?? "",
+            "muted": !self.mCore.micEnabled,
         ]
         resolve(
             returned
         )
     }
 
-    @objc(changeAudioDevice:withResolver:withRejecter:)
-    func changeAudioDevice(
+    @objc(setAudioDevice:withResolver:withRejecter:)
+    func setAudioDevice(
         deviceId: String,
         resolve: RCTPromiseResolveBlock,
         reject: RCTPromiseRejectBlock
     ) {
-        guard let currentCall = mCore.currentCall else {
-            reject("no-call", "No current call to set audio device", nil)
-            return
-        }
-
         guard let newDevice = mCore.audioDevices.first(where: { $0.id == deviceId }) else {
             reject("no-device", "No device with id \(deviceId) found", nil)
             return
@@ -575,10 +491,10 @@ class Sip: RCTEventEmitter {
 
         self.configureAudioSession()
 
-        currentCall.outputAudioDevice = newDevice
+        self.mCall.outputAudioDevice = newDevice
 
         if newDevice.capabilities.contains(.CapabilityAll) {
-            currentCall.inputAudioDevice = newDevice
+            self.mCall.inputAudioDevice = newDevice
         }
 
         self.sendEvent(

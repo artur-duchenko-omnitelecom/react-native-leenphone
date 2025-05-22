@@ -114,6 +114,8 @@ extension CallKitProviderDelegate: CXProviderDelegate {
         do {
             if tutorialContext.mCall?.state != .End && tutorialContext.mCall?.state != .Released {
                 try tutorialContext.mCall?.terminate()
+            } else if tutorialContext.mCall?.state == .OutgoingRinging {
+                tutorialContext.declineCall()
             }
         } catch { NSLog(error.localizedDescription) }
 
@@ -128,9 +130,7 @@ extension CallKitProviderDelegate: CXProviderDelegate {
             // It is worth to note that an application does not have permission to configure the
             // AVAudioSession outside of this delegate action while it is running in background,
             // which is usually the case in an incoming call scenario.
-            tutorialContext.configureAudioSession()
-            try tutorialContext.mCall?.accept()
-            tutorialContext.isCallRunning = true
+            tutorialContext.acceptCall()
         } catch {
             print(error)
         }
